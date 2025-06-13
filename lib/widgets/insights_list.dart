@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vogu_health/services/api_service.dart';
 import 'package:vogu_health/models/health_data.dart';
+import 'package:vogu_health/models/health_insight.dart' as insight;
 import 'package:vogu_health/widgets/date_range_selector.dart';
 
 class InsightsList extends StatefulWidget {
@@ -51,6 +52,7 @@ class _InsightsListState extends State<InsightsList> {
     final apiService = context.watch<ApiService>();
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         DateRangeSelector(
           startDate: _startDate,
@@ -58,240 +60,235 @@ class _InsightsListState extends State<InsightsList> {
           onRangeChanged: _onDateRangeChanged,
           errorMessage: _errorMessage,
         ),
-        Expanded(
-          child: FutureBuilder<List<HealthInsight>>(
-            future: apiService.getInsightsByDateRange(_startDate, _endDate),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+        FutureBuilder<List<insight.HealthInsight>>(
+          future: apiService.getRecentInsights(days: _endDate.difference(_startDate).inDays),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              if (snapshot.hasError) {
-                setState(() {
-                  _errorMessage = _getErrorMessage(snapshot.error);
-                });
-                
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _getErrorIcon(snapshot.error),
-                        size: 48,
-                        color: Theme.of(context).colorScheme.error,
+            if (snapshot.hasError) {
+              final errorMessage = _getErrorMessage(snapshot.error);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _errorMessage = errorMessage;
+                  });
+                }
+              });
+              
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _getErrorIcon(snapshot.error),
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Text(
+                        errorMessage ?? 'An error occurred',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                        child: Text(
-                          _getErrorMessage(snapshot.error) ?? 'An error occurred',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_shouldShowRetryButton(snapshot.error))
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _errorMessage = null;
+                          });
+                        },
+                        child: const Text('Try Again'),
                       ),
-                      const SizedBox(height: 16),
-                      if (_shouldShowRetryButton(snapshot.error))
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _errorMessage = null;
-                            });
-                          },
-                          child: const Text('Try Again'),
-                        ),
-                    ],
-                  ),
-                );
-              }
+                  ],
+                ),
+              );
+            }
 
-              final insights = snapshot.data;
-              if (insights == null || insights.isEmpty) {
-                return const Center(child: Text('No insights available'));
-              }
+            final insights = snapshot.data;
+            if (insights == null || insights.isEmpty) {
+              return const Center(child: Text('No insights available'));
+            }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: insights.length,
-                itemBuilder: (context, index) {
-                  final insight = insights[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _getInsightIcon(insight.category),
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  insight.category,
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            insight.message,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          if (insight.recommendation != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        _getActionIcon(insight.actionType),
-                                        color: Theme.of(context).colorScheme.primary,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Recommendation',
-                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                      ),
-                                      if (insight.priority != null) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _getPriorityColor(insight.priority!),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            insight.priority!,
-                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    insight.recommendation!,
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  if (insight.confidence != null) ...[
-                                    const SizedBox(height: 8),
-                                    LinearProgressIndicator(
-                                      value: insight.confidence! / 100,
-                                      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Theme.of(context).colorScheme.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Confidence: ${insight.confidence!.toStringAsFixed(0)}%',
-                                      style: Theme.of(context).textTheme.labelSmall,
-                                    ),
-                                  ],
-                                ],
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: insights.length,
+              itemBuilder: (context, index) {
+                final insight = insights[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _getInsightIcon(insight.category),
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                insight.title,
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ),
                           ],
-                          const SizedBox(height: 8),
-                          Text(
-                            _formatDate(insight.timestamp),
-                            style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          insight.description,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        if (insight.recommendations != null && insight.recommendations!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lightbulb_outline,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Recommendations',
+                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                    if (insight.severity != null) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getSeverityColor(insight.severity!),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          _getSeverityLabel(insight.severity!),
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...insight.recommendations!.map((rec) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    '• $rec',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                )),
+                              ],
+                            ),
                           ),
                         ],
-                      ),
+                        if (insight.metrics != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Metrics',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          ...insight.metrics!.entries.map((entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                Text(
+                                  entry.value.toString(),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                        ],
+                      ],
                     ),
-                  );
-                },
-              );
-            },
-          ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ],
     );
   }
 
-  IconData _getErrorIcon(dynamic error) {
-    if (error is NoDataException) {
-      return Icons.data_usage;
-    } else if (error is InvalidDateRangeException || error is FutureDateException) {
-      return Icons.event_busy;
-    } else if (error is DateRangeTooLargeException) {
-      return Icons.date_range;
-    }
-    return Icons.error_outline;
+  Color _getSeverityColor(int severity) {
+    if (severity >= 80) return Colors.red;
+    if (severity >= 60) return Colors.orange;
+    if (severity >= 40) return Colors.yellow.shade700;
+    if (severity >= 20) return Colors.blue;
+    return Colors.green;
   }
 
-  bool _shouldShowRetryButton(dynamic error) {
-    return error is! InvalidDateRangeException && 
-           error is! FutureDateException && 
-           error is! DateRangeTooLargeException;
+  String _getSeverityLabel(int severity) {
+    if (severity >= 80) return 'Critical';
+    if (severity >= 60) return 'High';
+    if (severity >= 40) return 'Medium';
+    if (severity >= 20) return 'Low';
+    return 'Info';
   }
 
   IconData _getInsightIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'heart':
-        return Icons.favorite;
       case 'sleep':
         return Icons.bedtime;
+      case 'heart':
+        return Icons.favorite;
       case 'weight':
         return Icons.monitor_weight;
       case 'activity':
         return Icons.directions_run;
+      case 'stress':
+        return Icons.psychology;
       default:
         return Icons.insights;
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  IconData _getErrorIcon(dynamic error) {
+    if (error is NoDataException) return Icons.search_off;
+    if (error is InvalidDateRangeException) return Icons.date_range;
+    if (error is FutureDateException) return Icons.update;
+    if (error is DateRangeTooLargeException) return Icons.calendar_month;
+    return Icons.error_outline;
   }
 
-  IconData _getActionIcon(String? actionType) {
-    switch (actionType?.toLowerCase()) {
-      case 'exercise':
-        return Icons.directions_run;
-      case 'sleep':
-        return Icons.bedtime;
-      case 'nutrition':
-        return Icons.restaurant;
-      case 'stress':
-        return Icons.psychology;
-      case 'meditation':
-        return Icons.self_improvement;
-      default:
-        return Icons.lightbulb;
-    }
-  }
-
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+  bool _shouldShowRetryButton(dynamic error) {
+    return error is NetworkException || error is ServerException;
   }
 } 

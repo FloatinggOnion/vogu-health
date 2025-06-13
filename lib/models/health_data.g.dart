@@ -61,71 +61,397 @@ class HealthDataAdapter extends TypeAdapter<HealthData> {
           typeId == other.typeId;
 }
 
+class SleepPhasesAdapter extends TypeAdapter<SleepPhases> {
+  @override
+  final int typeId = 1;
+
+  @override
+  SleepPhases read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return SleepPhases(
+      deep: fields[0] as int,
+      light: fields[1] as int,
+      rem: fields[2] as int,
+      awake: fields[3] as int,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, SleepPhases obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.deep)
+      ..writeByte(1)
+      ..write(obj.light)
+      ..writeByte(2)
+      ..write(obj.rem)
+      ..writeByte(3)
+      ..write(obj.awake);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SleepPhasesAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class SleepDataAdapter extends TypeAdapter<SleepData> {
+  @override
+  final int typeId = 2;
+
+  @override
+  SleepData read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return SleepData(
+      startTime: fields[0] as DateTime,
+      endTime: fields[1] as DateTime,
+      quality: fields[2] as int,
+      phases: fields[3] as SleepPhases,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, SleepData obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.startTime)
+      ..writeByte(1)
+      ..write(obj.endTime)
+      ..writeByte(2)
+      ..write(obj.quality)
+      ..writeByte(3)
+      ..write(obj.phases);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SleepDataAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HeartRateDataAdapter extends TypeAdapter<HeartRateData> {
+  @override
+  final int typeId = 3;
+
+  @override
+  HeartRateData read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HeartRateData(
+      timestamp: fields[0] as DateTime,
+      value: fields[1] as int,
+      restingRate: fields[2] as int?,
+      activityType: fields[3] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HeartRateData obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.timestamp)
+      ..writeByte(1)
+      ..write(obj.value)
+      ..writeByte(2)
+      ..write(obj.restingRate)
+      ..writeByte(3)
+      ..write(obj.activityType);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HeartRateDataAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class BodyCompositionAdapter extends TypeAdapter<BodyComposition> {
+  @override
+  final int typeId = 4;
+
+  @override
+  BodyComposition read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return BodyComposition(
+      bodyFat: fields[0] as double,
+      muscleMass: fields[1] as double,
+      waterPercentage: fields[2] as double,
+      boneMass: fields[3] as double?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, BodyComposition obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.bodyFat)
+      ..writeByte(1)
+      ..write(obj.muscleMass)
+      ..writeByte(2)
+      ..write(obj.waterPercentage)
+      ..writeByte(3)
+      ..write(obj.boneMass);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BodyCompositionAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class WeightDataAdapter extends TypeAdapter<WeightData> {
+  @override
+  final int typeId = 5;
+
+  @override
+  WeightData read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return WeightData(
+      timestamp: fields[0] as DateTime,
+      value: fields[1] as double,
+      bmi: fields[2] as double?,
+      bodyComposition: fields[3] as BodyComposition?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, WeightData obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.timestamp)
+      ..writeByte(1)
+      ..write(obj.value)
+      ..writeByte(2)
+      ..write(obj.bmi)
+      ..writeByte(3)
+      ..write(obj.bodyComposition);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WeightDataAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HealthMetricsAdapter extends TypeAdapter<HealthMetrics> {
+  @override
+  final int typeId = 6;
+
+  @override
+  HealthMetrics read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HealthMetrics(
+      heartRate: (fields[0] as List).cast<HeartRateData>(),
+      sleep: (fields[1] as List).cast<SleepData>(),
+      weight: (fields[2] as List).cast<WeightData>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HealthMetrics obj) {
+    writer
+      ..writeByte(3)
+      ..writeByte(0)
+      ..write(obj.heartRate)
+      ..writeByte(1)
+      ..write(obj.sleep)
+      ..writeByte(2)
+      ..write(obj.weight);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HealthMetricsAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class HealthInsightAdapter extends TypeAdapter<HealthInsight> {
+  @override
+  final int typeId = 7;
+
+  @override
+  HealthInsight read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return HealthInsight(
+      message: fields[0] as String,
+      category: fields[1] as String,
+      timestamp: fields[2] as DateTime,
+      recommendation: fields[3] as String?,
+      confidence: fields[4] as double?,
+      metrics: (fields[5] as Map?)?.cast<String, dynamic>(),
+      actionType: fields[6] as String?,
+      priority: fields[7] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, HealthInsight obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.message)
+      ..writeByte(1)
+      ..write(obj.category)
+      ..writeByte(2)
+      ..write(obj.timestamp)
+      ..writeByte(3)
+      ..write(obj.recommendation)
+      ..writeByte(4)
+      ..write(obj.confidence)
+      ..writeByte(5)
+      ..write(obj.metrics)
+      ..writeByte(6)
+      ..write(obj.actionType)
+      ..writeByte(7)
+      ..write(obj.priority);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HealthInsightAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-HeartRateData _$HeartRateDataFromJson(Map<String, dynamic> json) =>
-    HeartRateData(
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      heartRate: (json['heartRate'] as num).toInt(),
-      restingHeartRate: (json['restingHeartRate'] as num).toInt(),
-      maxHeartRate: (json['maxHeartRate'] as num).toInt(),
-      minHeartRate: (json['minHeartRate'] as num).toInt(),
+SleepPhases _$SleepPhasesFromJson(Map<String, dynamic> json) => SleepPhases(
+      deep: (json['deep'] as num).toInt(),
+      light: (json['light'] as num).toInt(),
+      rem: (json['rem'] as num).toInt(),
+      awake: (json['awake'] as num).toInt(),
     );
 
-Map<String, dynamic> _$HeartRateDataToJson(HeartRateData instance) =>
+Map<String, dynamic> _$SleepPhasesToJson(SleepPhases instance) =>
     <String, dynamic>{
-      'timestamp': instance.timestamp.toIso8601String(),
-      'heartRate': instance.heartRate,
-      'restingHeartRate': instance.restingHeartRate,
-      'maxHeartRate': instance.maxHeartRate,
-      'minHeartRate': instance.minHeartRate,
+      'deep': instance.deep,
+      'light': instance.light,
+      'rem': instance.rem,
+      'awake': instance.awake,
     };
 
 SleepData _$SleepDataFromJson(Map<String, dynamic> json) => SleepData(
       startTime: DateTime.parse(json['startTime'] as String),
       endTime: DateTime.parse(json['endTime'] as String),
-      totalSleepTime: (json['totalSleepTime'] as num).toInt(),
-      deepSleepTime: (json['deepSleepTime'] as num).toInt(),
-      lightSleepTime: (json['lightSleepTime'] as num).toInt(),
-      remSleepTime: (json['remSleepTime'] as num).toInt(),
-      awakeTime: (json['awakeTime'] as num).toInt(),
-      sleepQuality: (json['sleepQuality'] as num).toInt(),
-      sleepScore: (json['sleepScore'] as num).toInt(),
+      quality: (json['quality'] as num).toInt(),
+      phases: SleepPhases.fromJson(json['phases'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$SleepDataToJson(SleepData instance) => <String, dynamic>{
       'startTime': instance.startTime.toIso8601String(),
       'endTime': instance.endTime.toIso8601String(),
-      'totalSleepTime': instance.totalSleepTime,
-      'deepSleepTime': instance.deepSleepTime,
-      'lightSleepTime': instance.lightSleepTime,
-      'remSleepTime': instance.remSleepTime,
-      'awakeTime': instance.awakeTime,
-      'sleepQuality': instance.sleepQuality,
-      'sleepScore': instance.sleepScore,
+      'quality': instance.quality,
+      'phases': instance.phases,
+    };
+
+HeartRateData _$HeartRateDataFromJson(Map<String, dynamic> json) =>
+    HeartRateData(
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      value: (json['value'] as num).toInt(),
+      restingRate: (json['restingRate'] as num?)?.toInt(),
+      activityType: json['activityType'] as String?,
+    );
+
+Map<String, dynamic> _$HeartRateDataToJson(HeartRateData instance) =>
+    <String, dynamic>{
+      'timestamp': instance.timestamp.toIso8601String(),
+      'value': instance.value,
+      'restingRate': instance.restingRate,
+      'activityType': instance.activityType,
+    };
+
+BodyComposition _$BodyCompositionFromJson(Map<String, dynamic> json) =>
+    BodyComposition(
+      bodyFat: (json['bodyFat'] as num).toDouble(),
+      muscleMass: (json['muscleMass'] as num).toDouble(),
+      waterPercentage: (json['waterPercentage'] as num).toDouble(),
+      boneMass: (json['boneMass'] as num?)?.toDouble(),
+    );
+
+Map<String, dynamic> _$BodyCompositionToJson(BodyComposition instance) =>
+    <String, dynamic>{
+      'bodyFat': instance.bodyFat,
+      'muscleMass': instance.muscleMass,
+      'waterPercentage': instance.waterPercentage,
+      'boneMass': instance.boneMass,
     };
 
 WeightData _$WeightDataFromJson(Map<String, dynamic> json) => WeightData(
       timestamp: DateTime.parse(json['timestamp'] as String),
-      weight: (json['weight'] as num).toDouble(),
-      bmi: (json['bmi'] as num).toDouble(),
-      bodyFat: (json['bodyFat'] as num).toDouble(),
-      bodyWater: (json['bodyWater'] as num).toDouble(),
-      muscleMass: (json['muscleMass'] as num).toDouble(),
-      boneMass: (json['boneMass'] as num).toDouble(),
+      value: (json['value'] as num).toDouble(),
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      bodyComposition: json['bodyComposition'] == null
+          ? null
+          : BodyComposition.fromJson(
+              json['bodyComposition'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$WeightDataToJson(WeightData instance) =>
     <String, dynamic>{
       'timestamp': instance.timestamp.toIso8601String(),
-      'weight': instance.weight,
+      'value': instance.value,
       'bmi': instance.bmi,
-      'bodyFat': instance.bodyFat,
-      'bodyWater': instance.bodyWater,
-      'muscleMass': instance.muscleMass,
-      'boneMass': instance.boneMass,
+      'bodyComposition': instance.bodyComposition,
     };
 
 HealthMetrics _$HealthMetricsFromJson(Map<String, dynamic> json) =>

@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vogu_health/services/health_data_service.dart';
 import 'package:vogu_health/services/feedback_service.dart';
-import 'package:vogu_health/models/health_data.dart';
+import 'package:vogu_health/models/health_data.dart' as health_data;
 import '../widgets/current_stats.dart';
 import '../widgets/health_trends.dart';
 import '../widgets/insights_list.dart';
+import 'package:vogu_health/services/api_service.dart';
+import 'package:vogu_health/widgets/health_data_entry_form.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ApiService apiService;
+
+  const HomeScreen({
+    super.key,
+    required this.apiService,
+  });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  bool _showEntryForm = false;
 
   @override
   void initState() {
@@ -24,11 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final healthDataService = context.read<HealthDataService>();
       final feedbackService = context.read<FeedbackService>();
-      healthDataService.getHealthDataByDateRange(
-        DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
-        DateTime.now().toIso8601String(),
-      );
-      healthDataService.loadHealthDataHistory();
+      
+      // Load initial data
+      healthDataService.loadData(days: 7);
       feedbackService.loadFeedbackHistory();
     });
   }
@@ -40,56 +46,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vogu Health'),
+        title: const Text('Health Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(_showEntryForm ? Icons.analytics : Icons.add),
             onPressed: () {
-              final healthDataService = context.read<HealthDataService>();
-              healthDataService.getHealthDataByDateRange(
-                DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
-                DateTime.now().toIso8601String(),
-              );
+              setState(() {
+                _showEntryForm = !_showEntryForm;
+              });
             },
+            tooltip: _showEntryForm ? 'Show Analytics' : 'Add Data',
           ),
         ],
       ),
-      body: FutureBuilder<List<HealthData>>(
-        future: healthDataService.getHealthDataByDateRange(
-          DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
-          DateTime.now().toIso8601String(),
-        ),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final healthData = snapshot.data ?? [];
-
-          return IndexedStack(
-            index: _selectedIndex,
-            children: const [
-              CurrentStats(),
-              HealthTrends(),
-              InsightsList(),
-            ],
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Trigger refresh of all data
+          setState(() {});
         },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_showEntryForm)
+                  HealthDataEntryForm(
+                    apiService: widget.apiService,
+                    onSuccess: () {
+                      setState(() {
+                        _showEntryForm = false;
+                      });
+                    },
+                  )
+                else
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CurrentStats(),
+                      SizedBox(height: 24),
+                      HealthTrends(),
+                      SizedBox(height: 24),
+                      InsightsList(),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final healthDataService = context.read<HealthDataService>();
-          final newData = HealthData(
-            date: DateTime.now().toIso8601String(),
-            hrv: 75.0,
-            heartRate: 72,
-            createdAt: DateTime.now().toIso8601String(),
+          final newData = health_data.HeartRateData(
+            timestamp: DateTime.now(),
+            value: 72,
+            restingRate: 65,
+            activityType: 'resting',
           );
-          await healthDataService.insertHealthData(newData);
+          await healthDataService.submitHeartRateData(newData);
         },
         child: const Icon(Icons.add),
       ),

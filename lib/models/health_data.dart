@@ -68,47 +68,45 @@ class HealthData extends HiveObject {
 }
 
 @JsonSerializable()
-class HeartRateData {
-  final DateTime timestamp;
-  final int heartRate;
-  final int restingHeartRate;
-  final int maxHeartRate;
-  final int minHeartRate;
+@HiveType(typeId: 1)
+class SleepPhases {
+  @HiveField(0)
+  final int deep;
+  @HiveField(1)
+  final int light;
+  @HiveField(2)
+  final int rem;
+  @HiveField(3)
+  final int awake;
 
-  HeartRateData({
-    required this.timestamp,
-    required this.heartRate,
-    required this.restingHeartRate,
-    required this.maxHeartRate,
-    required this.minHeartRate,
+  SleepPhases({
+    required this.deep,
+    required this.light,
+    required this.rem,
+    required this.awake,
   });
 
-  factory HeartRateData.fromJson(Map<String, dynamic> json) => _$HeartRateDataFromJson(json);
-  Map<String, dynamic> toJson() => _$HeartRateDataToJson(this);
+  factory SleepPhases.fromJson(Map<String, dynamic> json) => _$SleepPhasesFromJson(json);
+  Map<String, dynamic> toJson() => _$SleepPhasesToJson(this);
 }
 
 @JsonSerializable()
+@HiveType(typeId: 2)
 class SleepData {
+  @HiveField(0)
   final DateTime startTime;
+  @HiveField(1)
   final DateTime endTime;
-  final int totalSleepTime;
-  final int deepSleepTime;
-  final int lightSleepTime;
-  final int remSleepTime;
-  final int awakeTime;
-  final int sleepQuality;
-  final int sleepScore;
+  @HiveField(2)
+  final int quality;
+  @HiveField(3)
+  final SleepPhases phases;
 
   SleepData({
     required this.startTime,
     required this.endTime,
-    required this.totalSleepTime,
-    required this.deepSleepTime,
-    required this.lightSleepTime,
-    required this.remSleepTime,
-    required this.awakeTime,
-    required this.sleepQuality,
-    required this.sleepScore,
+    required this.quality,
+    required this.phases,
   });
 
   factory SleepData.fromJson(Map<String, dynamic> json) => _$SleepDataFromJson(json);
@@ -116,23 +114,68 @@ class SleepData {
 }
 
 @JsonSerializable()
-class WeightData {
+@HiveType(typeId: 3)
+class HeartRateData {
+  @HiveField(0)
   final DateTime timestamp;
-  final double weight;
-  final double bmi;
+  @HiveField(1)
+  final int value;
+  @HiveField(2)
+  final int? restingRate;
+  @HiveField(3)
+  final String? activityType;
+
+  HeartRateData({
+    required this.timestamp,
+    required this.value,
+    this.restingRate,
+    this.activityType,
+  });
+
+  factory HeartRateData.fromJson(Map<String, dynamic> json) => _$HeartRateDataFromJson(json);
+  Map<String, dynamic> toJson() => _$HeartRateDataToJson(this);
+}
+
+@JsonSerializable()
+@HiveType(typeId: 4)
+class BodyComposition {
+  @HiveField(0)
   final double bodyFat;
-  final double bodyWater;
+  @HiveField(1)
   final double muscleMass;
-  final double boneMass;
+  @HiveField(2)
+  final double waterPercentage;
+  @HiveField(3)
+  final double? boneMass;
+
+  BodyComposition({
+    required this.bodyFat,
+    required this.muscleMass,
+    required this.waterPercentage,
+    this.boneMass,
+  });
+
+  factory BodyComposition.fromJson(Map<String, dynamic> json) => _$BodyCompositionFromJson(json);
+  Map<String, dynamic> toJson() => _$BodyCompositionToJson(this);
+}
+
+@JsonSerializable()
+@HiveType(typeId: 5)
+class WeightData {
+  @HiveField(0)
+  final DateTime timestamp;
+  @HiveField(1)
+  final double value;
+  @HiveField(2)
+  final double? bmi;
+  @HiveField(3)
+  final BodyComposition? bodyComposition;
 
   WeightData({
     required this.timestamp,
-    required this.weight,
-    required this.bmi,
-    required this.bodyFat,
-    required this.bodyWater,
-    required this.muscleMass,
-    required this.boneMass,
+    required this.value,
+    this.bmi,
+    this.bodyComposition,
   });
 
   factory WeightData.fromJson(Map<String, dynamic> json) => _$WeightDataFromJson(json);
@@ -140,9 +183,13 @@ class WeightData {
 }
 
 @JsonSerializable()
+@HiveType(typeId: 6)
 class HealthMetrics {
+  @HiveField(0)
   final List<HeartRateData> heartRate;
+  @HiveField(1)
   final List<SleepData> sleep;
+  @HiveField(2)
   final List<WeightData> weight;
 
   HealthMetrics({
@@ -156,14 +203,23 @@ class HealthMetrics {
 }
 
 @JsonSerializable()
+@HiveType(typeId: 7)
 class HealthInsight {
+  @HiveField(0)
   final String message;
+  @HiveField(1)
   final String category;
+  @HiveField(2)
   final DateTime timestamp;
+  @HiveField(3)
   final String? recommendation;
+  @HiveField(4)
   final double? confidence;
+  @HiveField(5)
   final Map<String, dynamic>? metrics;
+  @HiveField(6)
   final String? actionType;
+  @HiveField(7)
   final String? priority;
 
   HealthInsight({

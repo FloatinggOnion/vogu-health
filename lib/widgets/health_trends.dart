@@ -4,6 +4,8 @@ import 'package:vogu_health/services/api_service.dart';
 import 'package:vogu_health/models/health_data.dart';
 import 'package:vogu_health/widgets/date_range_selector.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:vogu_health/screens/home_screen.dart';
+import 'package:intl/intl.dart';
 
 class HealthTrends extends StatefulWidget {
   const HealthTrends({super.key});
@@ -13,6 +15,8 @@ class HealthTrends extends StatefulWidget {
 }
 
 class _HealthTrendsState extends State<HealthTrends> {
+  String _selectedMetric = 'heart-rate';
+  int _selectedDays = 7;
   late DateTime _startDate;
   late DateTime _endDate;
   String? _errorMessage;
@@ -49,175 +53,338 @@ class _HealthTrendsState extends State<HealthTrends> {
 
   @override
   Widget build(BuildContext context) {
-    final apiService = context.watch<ApiService>();
+    final apiService = context.findAncestorStateOfType<HomeScreenState>()?.widget.apiService;
 
-    return Column(
-      children: [
-        DateRangeSelector(
-          startDate: _startDate,
-          endDate: _endDate,
-          onRangeChanged: _onDateRangeChanged,
-          errorMessage: _errorMessage,
+    if (apiService == null) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('Error: API service not found'),
         ),
-        Expanded(
-          child: FutureBuilder<HealthMetrics>(
-            future: apiService.getMetricsByDateRange(_startDate, _endDate),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+      );
+    }
 
-              if (snapshot.hasError) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Health Trends',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const Spacer(),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 7, label: Text('7D')),
+                    ButtonSegment(value: 30, label: Text('30D')),
+                    ButtonSegment(value: 90, label: Text('90D')),
+                  ],
+                  selected: {_selectedDays},
+                  onSelectionChanged: (Set<int> selection) {
+                    setState(() {
+                      _selectedDays = selection.first;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'heart-rate',
+                  label: Text('Heart Rate'),
+                  icon: Icon(Icons.favorite),
+                ),
+                ButtonSegment(
+                  value: 'sleep',
+                  label: Text('Sleep'),
+                  icon: Icon(Icons.bedtime),
+                ),
+                ButtonSegment(
+                  value: 'weight',
+                  label: Text('Weight'),
+                  icon: Icon(Icons.monitor_weight),
+                ),
+              ],
+              selected: {_selectedMetric},
+              onSelectionChanged: (Set<String> selection) {
                 setState(() {
-                  _errorMessage = _getErrorMessage(snapshot.error);
+                  _selectedMetric = selection.first;
                 });
-                
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _getErrorIcon(snapshot.error),
-                        size: 48,
-                        color: Theme.of(context).colorScheme.error,
+              },
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 300,
+              child: FutureBuilder<HealthMetrics>(
+                future: apiService.getMetricsByDateRange(
+                  DateTime.now().subtract(Duration(days: _selectedDays)),
+                  DateTime.now(),
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading trends',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            snapshot.error.toString(),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                        child: Text(
-                          _getErrorMessage(snapshot.error) ?? 'An error occurred',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_shouldShowRetryButton(snapshot.error))
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _errorMessage = null;
-                            });
-                          },
-                          child: const Text('Try Again'),
-                        ),
-                    ],
+                    );
+                  }
+
+                  final metrics = snapshot.data;
+                  if (metrics == null) {
+                    return const Center(child: Text('No data available'));
+                  }
+
+                  switch (_selectedMetric) {
+                    case 'heart-rate':
+                      return _buildHeartRateChart(metrics.heartRate);
+                    case 'sleep':
+                      return _buildSleepChart(metrics.sleep);
+                    case 'weight':
+                      return _buildWeightChart(metrics.weight);
+                    default:
+                      return const Center(child: Text('Invalid metric selected'));
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeartRateChart(List<HeartRateData> data) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No heart rate data available'));
+    }
+
+    final spots = data.map((point) {
+      return FlSpot(
+        point.timestamp.millisecondsSinceEpoch.toDouble(),
+        point.value.toDouble(),
+      );
+    }).toList();
+
+    return LineChart(
+      LineChartData(
+        gridData: const FlGridData(show: true),
+        titlesData: FlTitlesData(
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    DateFormat('MM/dd').format(date),
+                    style: const TextStyle(fontSize: 10),
                   ),
                 );
-              }
-
-              final metrics = snapshot.data;
-              if (metrics == null || metrics.heartRate.isEmpty) {
-                return const Center(child: Text('No data available'));
-              }
-
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Health Trends',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: LineChart(
-                        LineChartData(
-                          gridData: const FlGridData(show: false),
-                          titlesData: const FlTitlesData(show: false),
-                          borderData: FlBorderData(show: false),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: metrics.heartRate.asMap().entries.map((entry) {
-                                return FlSpot(
-                                  entry.key.toDouble(),
-                                  entry.value.heartRate.toDouble(),
-                                );
-                              }).toList(),
-                              isCurved: true,
-                              color: Theme.of(context).colorScheme.primary,
-                              barWidth: 3,
-                              isStrokeCapRound: true,
-                              dotData: const FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildMetricSummary(
-                          context,
-                          'Avg Heart Rate',
-                          '${_calculateAverage(metrics.heartRate.map((hr) => hr.heartRate).toList()).toStringAsFixed(0)} bpm',
-                        ),
-                        _buildMetricSummary(
-                          context,
-                          'Avg Sleep',
-                          '${_calculateAverage(metrics.sleep.map((s) => s.totalSleepTime / 60).toList()).toStringAsFixed(1)} hrs',
-                        ),
-                        _buildMetricSummary(
-                          context,
-                          'Avg Weight',
-                          '${_calculateAverage(metrics.weight.map((w) => w.weight).toList()).toStringAsFixed(1)} kg',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+              },
+              reservedSize: 30,
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
           ),
         ),
-      ],
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: Colors.red,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.red.withOpacity(0.1),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  IconData _getErrorIcon(dynamic error) {
-    if (error is NoDataException) {
-      return Icons.data_usage;
-    } else if (error is InvalidDateRangeException || error is FutureDateException) {
-      return Icons.event_busy;
-    } else if (error is DateRangeTooLargeException) {
-      return Icons.date_range;
+  Widget _buildSleepChart(List<SleepData> data) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No sleep data available'));
     }
-    return Icons.error_outline;
-  }
 
-  bool _shouldShowRetryButton(dynamic error) {
-    return error is! InvalidDateRangeException && 
-           error is! FutureDateException && 
-           error is! DateRangeTooLargeException;
-  }
+    final spots = data.map((point) {
+      final duration = point.endTime.difference(point.startTime).inMinutes / 60;
+      return FlSpot(
+        point.startTime.millisecondsSinceEpoch.toDouble(),
+        duration,
+      );
+    }).toList();
 
-  Widget _buildMetricSummary(
-    BuildContext context,
-    String title,
-    String value,
-  ) {
-    return Column(
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.bodySmall,
+    return LineChart(
+      LineChartData(
+        gridData: const FlGridData(show: true),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}h',
+                  style: const TextStyle(fontSize: 10),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    DateFormat('MM/dd').format(date),
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                );
+              },
+              reservedSize: 30,
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ],
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: Colors.blue,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.blue.withOpacity(0.1),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  double _calculateAverage(List<num> values) {
-    if (values.isEmpty) return 0;
-    return values.reduce((a, b) => a + b) / values.length;
+  Widget _buildWeightChart(List<WeightData> data) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No weight data available'));
+    }
+
+    final spots = data.map((point) {
+      return FlSpot(
+        point.timestamp.millisecondsSinceEpoch.toDouble(),
+        point.value,
+      );
+    }).toList();
+
+    return LineChart(
+      LineChartData(
+        gridData: const FlGridData(show: true),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toStringAsFixed(1)}kg',
+                  style: const TextStyle(fontSize: 10),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    DateFormat('MM/dd').format(date),
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                );
+              },
+              reservedSize: 30,
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: Colors.green,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.green.withOpacity(0.1),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 } 
