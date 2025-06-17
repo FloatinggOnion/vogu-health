@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:vogu_health/services/health_api_service.dart';
 import 'package:vogu_health/models/api_models.dart';
 import 'package:vogu_health/presentation/widgets/data_submission_dialog.dart';
+import 'package:vogu_health/presentation/widgets/health_chart.dart';
 
 /// Main health dashboard screen
 class HealthDashboardScreen extends StatefulWidget {
-  const HealthDashboardScreen({super.key});
+  const HealthDashboardScreen({Key? key}) : super(key: key);
 
   @override
   State<HealthDashboardScreen> createState() => _HealthDashboardScreenState();
@@ -13,10 +14,10 @@ class HealthDashboardScreen extends StatefulWidget {
 
 class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
   final HealthApiService _apiService = HealthApiService();
+  bool _isLoading = false;
   List<SleepDataResponse> _sleepData = [];
   List<HeartRateDataResponse> _heartRateData = [];
   List<WeightDataResponse> _weightData = [];
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -126,6 +127,22 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                       _formatSleepDuration(_sleepData),
                       'hours (Quality: ${_formatSleepQuality(_sleepData)})',
                     ),
+                    HealthChart(
+                      data: _sleepData,
+                      title: 'Sleep Duration & Quality',
+                      valueLabel: 'Duration (hours)',
+                      secondaryValueLabel: 'Quality',
+                      primaryColor: Colors.indigo,
+                      secondaryColor: Colors.purple,
+                      showSecondaryAxis: true,
+                      getPrimaryValue: (data) {
+                        final startTime = DateTime.parse(data.startTime);
+                        final endTime = DateTime.parse(data.endTime);
+                        return endTime.difference(startTime).inHours.toDouble();
+                      },
+                      getSecondaryValue: (data) => data.quality?.toDouble() ?? 0,
+                      getTimestamp: (data) => DateTime.parse(data.startTime),
+                    ),
                     const SizedBox(height: 12),
                     _buildDataCard(
                       'Heart Rate',
@@ -135,6 +152,18 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                           ? _heartRateData.last.value?.toString() ?? 'N/A'
                           : 'N/A',
                       'bpm',
+                    ),
+                    HealthChart(
+                      data: _heartRateData,
+                      title: 'Heart Rate & Resting Rate',
+                      valueLabel: 'Heart Rate',
+                      secondaryValueLabel: 'Resting Rate',
+                      primaryColor: Colors.red,
+                      secondaryColor: Colors.orange,
+                      showSecondaryAxis: true,
+                      getPrimaryValue: (data) => data.value?.toDouble() ?? 0,
+                      getSecondaryValue: (data) => data.restingRate?.toDouble() ?? 0,
+                      getTimestamp: (data) => DateTime.parse(data.timestamp),
                     ),
                     const SizedBox(height: 12),
                     _buildDataCard(
@@ -146,21 +175,30 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                           : 'N/A',
                       'kg',
                     ),
+                    HealthChart(
+                      data: _weightData,
+                      title: 'Weight & BMI',
+                      valueLabel: 'Weight',
+                      secondaryValueLabel: 'BMI',
+                      primaryColor: Colors.green,
+                      secondaryColor: Colors.teal,
+                      showSecondaryAxis: true,
+                      getPrimaryValue: (data) => data.value?.toDouble() ?? 0,
+                      getSecondaryValue: (data) => data.bmi?.toDouble() ?? 0,
+                      getTimestamp: (data) => DateTime.parse(data.timestamp),
+                    ),
                   ],
                 ),
               ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           showDialog(
             context: context,
-            builder: (context) => const DataSubmissionDialog(),
+            builder: (context) => DataSubmissionDialog(),
           ).then((_) => _loadData());
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Data'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -174,14 +212,11 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
   ) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 32),
+            Icon(icon, size: 32, color: color),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -189,14 +224,19 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$value $unit',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    value,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  Text(
+                    unit,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
