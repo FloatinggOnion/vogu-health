@@ -1,34 +1,17 @@
-import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 // Note: Run 'flutter pub run build_runner build' to generate health_insight.g.dart
 part 'health_insight.g.dart';
 
 @JsonSerializable()
-@HiveType(typeId: 7)
 class HealthInsight {
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final DateTime timestamp;
-
-  @HiveField(2)
   final String category;
-
-  @HiveField(3)
   final String title;
-
-  @HiveField(4)
   final String description;
-
-  @HiveField(5)
   final Map<String, dynamic>? metrics;
-
-  @HiveField(6)
   final List<String>? recommendations;
-
-  @HiveField(7)
   final int? severity; // 0-100, where 0 is informational and 100 is critical
 
   HealthInsight({

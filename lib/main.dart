@@ -1,57 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:vogu_health/services/api_service.dart';
-import 'package:vogu_health/services/storage_service.dart';
-import 'package:vogu_health/services/health_data_service.dart';
-import 'package:vogu_health/services/feedback_service.dart';
-import 'screens/home_screen.dart';
+import 'package:vogu_health/core/di/service_locator.dart';
+import 'package:vogu_health/presentation/screens/health_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Hive
-  await Hive.initFlutter();
-  final cacheBox = await Hive.openBox('api_cache');
-  
-  // Initialize StorageService
-  final storageService = StorageService();
-  
-  runApp(
-    MultiProvider(
-      providers: [
-        // Base services
-        Provider<StorageService>(
-          create: (_) => storageService,
-        ),
-        Provider<ApiService>(
-          create: (context) => ApiService(
-            http.Client(),
-            cacheBox,
-            context.read<StorageService>(),
-          ),
-        ),
-        // Dependent services
-        ChangeNotifierProvider<HealthDataService>(
-          create: (context) => HealthDataService(
-            context.read<StorageService>(),
-            context.read<ApiService>(),
-          ),
-        ),
-        Provider<FeedbackService>(
-          create: (context) => FeedbackService(
-            context.read<StorageService>(),
-          ),
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  await initializeDependencies();
+  runApp(const VoguHealthApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class VoguHealthApp extends StatelessWidget {
+  const VoguHealthApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +19,87 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: HomeScreen(
-        apiService: context.read<ApiService>(),
+      home: const HealthDashboardScreen(),
+    );
+  }
+}
+
+// Alternative: If you want to add the health API to your existing app,
+// you can modify your existing main.dart like this:
+
+/*
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:vogu_health/core/di/service_locator.dart';
+import 'package:vogu_health/presentation/state_managers/sleep_data_state_manager_impl.dart';
+// Import your existing providers and screens
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize dependency injection
+  await initializeDependencies();
+  
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        // Your existing providers
+        ChangeNotifierProvider(create: (_) => YourExistingProvider()),
+        
+        // Add the new state managers using dependency injection
+        ChangeNotifierProvider<SleepDataStateManager>(
+          create: (_) => getService<SleepDataStateManager>(),
+        ),
+      ],
+      child: MaterialApp(
+        title: 'Your App',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: true,
+        ),
+        home: const YourExistingHomeScreen(),
+        routes: {
+          // Add a route to the health dashboard
+          '/health-dashboard': (context) => const HealthDataDashboard(),
+        },
       ),
     );
   }
 }
+
+// Then in your existing home screen, you can add a button to navigate to the health dashboard:
+class YourExistingHomeScreen extends StatelessWidget {
+  const YourExistingHomeScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Your App')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Your existing content
+            const Text('Welcome to Your App'),
+            
+            // Add a button to access the health dashboard
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushNamed('/health-dashboard');
+              },
+              child: const Text('Health Data Dashboard'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+*/ 
