@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:vogu_health/models/api_models.dart';
+import 'package:vogu_health/models/insight_models.dart';
 import 'package:vogu_health/core/exceptions/api_exceptions.dart';
 
 class HealthApiService {
@@ -8,7 +9,7 @@ class HealthApiService {
   final http.Client _client;
 
   HealthApiService({
-    this.baseUrl = 'https://five-bats-accept.loca.lt',
+    this.baseUrl = 'https://olive-clubs-care.loca.lt',
     http.Client? client,
   }) : _client = client ?? http.Client();
 
@@ -214,7 +215,7 @@ class HealthApiService {
     );
   }
 
-  Future<HealthInsightsResponse> getRecentInsights({int days = 7}) async {
+  Future<InsightResponse> getRecentInsights({int days = 7}) async {
     if (days < 1 || days > 30) {
       throw ValidationException(
         'Invalid days parameter',
@@ -222,19 +223,48 @@ class HealthApiService {
       );
     }
 
-    return _makeRequest<HealthInsightsResponse>(
+    return _makeRequest<InsightResponse>(
       endpoint: '/api/v1/insights/recent?days=$days',
       method: 'GET',
-      fromJson: (json) => HealthInsightsResponse.fromJson(json),
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        if (json['status'] != 'success') {
+          throw ApiException('API request failed', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null || insights is! Map<String, dynamic>) {
+          throw ApiException('No insights data found', statusCode: 422);
+        }
+        
+        return InsightResponse.fromJson(insights);
+      },
     );
   }
 
-  Future<HealthInsightsResponse> getDailyInsights(DateTime date) async {
-    final dateStr = date.toIso8601String().split('T')[0];
-    return _makeRequest<HealthInsightsResponse>(
-      endpoint: '/api/v1/insights/daily/$dateStr',
+  Future<InsightResponse> getDailyInsights(String date) async {
+    return _makeRequest<InsightResponse>(
+      endpoint: '/api/v1/insights/daily/$date',
       method: 'GET',
-      fromJson: (json) => HealthInsightsResponse.fromJson(json),
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        if (json['status'] != 'success') {
+          throw ApiException('API request failed', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null || insights is! Map<String, dynamic>) {
+          throw ApiException('No insights data found', statusCode: 422);
+        }
+        
+        return InsightResponse.fromJson(insights);
+      },
     );
   }
 
@@ -248,6 +278,106 @@ class HealthApiService {
     } catch (e) {
       return false;
     }
+  }
+
+  Future<List<SleepInsightResponse>> getSleepInsights() async {
+    return _makeRequest<List<SleepInsightResponse>>(
+      endpoint: '/api/v1/insights/sleep',
+      method: 'GET',
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null) {
+          return []; // Return empty list if no insights
+        }
+        
+        if (insights is! List) {
+          throw ApiException('Insights field is not a list', statusCode: 422);
+        }
+        
+        return insights
+            .map((item) => SleepInsightResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
+  Future<List<HeartRateInsightResponse>> getHeartRateInsights() async {
+    return _makeRequest<List<HeartRateInsightResponse>>(
+      endpoint: '/api/v1/insights/heart-rate',
+      method: 'GET',
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null) {
+          return []; // Return empty list if no insights
+        }
+        
+        if (insights is! List) {
+          throw ApiException('Insights field is not a list', statusCode: 422);
+        }
+        
+        return insights
+            .map((item) => HeartRateInsightResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
+  Future<List<WeightInsightResponse>> getWeightInsights() async {
+    return _makeRequest<List<WeightInsightResponse>>(
+      endpoint: '/api/v1/insights/weight',
+      method: 'GET',
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null) {
+          return []; // Return empty list if no insights
+        }
+        
+        if (insights is! List) {
+          throw ApiException('Insights field is not a list', statusCode: 422);
+        }
+        
+        return insights
+            .map((item) => WeightInsightResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
+  Future<List<CorrelationInsightResponse>> getCorrelationInsights() async {
+    return _makeRequest<List<CorrelationInsightResponse>>(
+      endpoint: '/api/v1/insights/correlations',
+      method: 'GET',
+      fromJson: (json) {
+        if (json is! Map<String, dynamic>) {
+          throw ApiException('Invalid response format', statusCode: 422);
+        }
+        
+        final insights = json['insights'];
+        if (insights == null) {
+          return []; // Return empty list if no insights
+        }
+        
+        if (insights is! List) {
+          throw ApiException('Insights field is not a list', statusCode: 422);
+        }
+        
+        return insights
+            .map((item) => CorrelationInsightResponse.fromJson(item as Map<String, dynamic>))
+            .toList();
+      },
+    );
   }
 
   void dispose() {

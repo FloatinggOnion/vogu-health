@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:vogu_health/services/health_api_service.dart';
 import 'package:vogu_health/models/api_models.dart';
 import 'package:vogu_health/presentation/widgets/data_submission_dialog.dart';
-import 'package:vogu_health/presentation/widgets/health_chart.dart';
 
 /// Main health dashboard screen
 class HealthDashboardScreen extends StatefulWidget {
@@ -99,7 +98,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Health Dashboard'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -127,22 +125,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                       _formatSleepDuration(_sleepData),
                       'hours (Quality: ${_formatSleepQuality(_sleepData)})',
                     ),
-                    HealthChart(
-                      data: _sleepData,
-                      title: 'Sleep Duration & Quality',
-                      valueLabel: 'Duration (hours)',
-                      secondaryValueLabel: 'Quality',
-                      primaryColor: Colors.indigo,
-                      secondaryColor: Colors.purple,
-                      showSecondaryAxis: true,
-                      getPrimaryValue: (data) {
-                        final startTime = DateTime.parse(data.startTime);
-                        final endTime = DateTime.parse(data.endTime);
-                        return endTime.difference(startTime).inHours.toDouble();
-                      },
-                      getSecondaryValue: (data) => data.quality?.toDouble() ?? 0,
-                      getTimestamp: (data) => DateTime.parse(data.startTime),
-                    ),
                     const SizedBox(height: 12),
                     _buildDataCard(
                       'Heart Rate',
@@ -153,18 +135,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                           : 'N/A',
                       'bpm',
                     ),
-                    HealthChart(
-                      data: _heartRateData,
-                      title: 'Heart Rate & Resting Rate',
-                      valueLabel: 'Heart Rate',
-                      secondaryValueLabel: 'Resting Rate',
-                      primaryColor: Colors.red,
-                      secondaryColor: Colors.orange,
-                      showSecondaryAxis: true,
-                      getPrimaryValue: (data) => data.value?.toDouble() ?? 0,
-                      getSecondaryValue: (data) => data.restingRate?.toDouble() ?? 0,
-                      getTimestamp: (data) => DateTime.parse(data.timestamp),
-                    ),
                     const SizedBox(height: 12),
                     _buildDataCard(
                       'Weight',
@@ -174,18 +144,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
                           ? _weightData.last.value?.toString() ?? 'N/A'
                           : 'N/A',
                       'kg',
-                    ),
-                    HealthChart(
-                      data: _weightData,
-                      title: 'Weight & BMI',
-                      valueLabel: 'Weight',
-                      secondaryValueLabel: 'BMI',
-                      primaryColor: Colors.green,
-                      secondaryColor: Colors.teal,
-                      showSecondaryAxis: true,
-                      getPrimaryValue: (data) => data.value?.toDouble() ?? 0,
-                      getSecondaryValue: (data) => data.bmi?.toDouble() ?? 0,
-                      getTimestamp: (data) => DateTime.parse(data.timestamp),
                     ),
                   ],
                 ),

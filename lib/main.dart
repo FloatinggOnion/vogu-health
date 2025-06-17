@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:vogu_health/core/di/service_locator.dart';
-import 'package:vogu_health/presentation/screens/health_dashboard_screen.dart';
+import 'package:vogu_health/presentation/screens/health_tabs_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDependencies();
-  runApp(const VoguHealthApp());
+void main() {
+  runApp(const MyApp());
 }
 
-class VoguHealthApp extends StatelessWidget {
-  const VoguHealthApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +16,7 @@ class VoguHealthApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const HealthDashboardScreen(),
+      home: const HealthTabsScreen(),
     );
   }
 }
