@@ -2,7 +2,7 @@
 /// Centralizes all configuration settings for easy maintenance
 class AppConfig {
   // API Configuration
-  static const String defaultApiBaseUrl = 'https://eager-otters-rule.loca.lt';
+  static const String defaultApiBaseUrl = 'https://vogu-health-be.onrender.com';
   static const Duration defaultTimeout = Duration(seconds: 30);
   static const int maxRetries = 3;
   static const Duration retryDelay = Duration(seconds: 2);

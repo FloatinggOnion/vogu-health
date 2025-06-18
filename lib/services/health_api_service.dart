@@ -3,13 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:vogu_health/models/api_models.dart';
 import 'package:vogu_health/models/insight_models.dart';
 import 'package:vogu_health/core/exceptions/api_exceptions.dart';
+import 'package:vogu_health/core/config/app_config.dart';
 
 class HealthApiService {
   final String baseUrl;
   final http.Client _client;
 
   HealthApiService({
-    this.baseUrl = 'https://olive-clubs-care.loca.lt',
+    this.baseUrl = 'https://vogu-health-be.onrender.com',
     http.Client? client,
   }) : _client = client ?? http.Client();
 
@@ -20,7 +21,8 @@ class HealthApiService {
     T Function(Map<String, dynamic> json)? fromJson,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
+      final cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+      final uri = Uri.parse('$baseUrl/$cleanEndpoint');
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
